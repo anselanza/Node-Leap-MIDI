@@ -1,31 +1,78 @@
-var io = require('socket.io').listen(5000, {log: true});
+// var io = require('socket.io').listen(5000, {log: true});
 var Leap = require('leapjs');
 
-io.sockets.on('connection', function (_socket) {
+// io.sockets.on('connection', function (_socket) {
+//
+// 	// MIDI callback....
+// 	input.on('message', function(deltaTime, message) {
+// 		console.log('m:' + message + ' d:' + deltaTime);
+// 		_socket.emit('midi', message);
+// 	});
+//
+// });
 
-	// MIDI callback....
-	input.on('message', function(deltaTime, message) {
-		console.log('m:' + message + ' d:' + deltaTime);
-		_socket.emit('midi', message);
-	});
 
-});
+//http://www.music.mcgill.ca/~gary/rtmidi/
 
-var NUM_NOTES = 8;
+var NUM_NOTES = 16;
+var OFFSET_PITCH = 36;
+
+var currentNote = 0;
+
+var TRAIN_INPUT = "none";
 
 var midi = require('midi');
 console.log("MIDI up and running...");
 
 Leap.loop(function(frame){
-  if (frame.hands.length === 1) {
+  if (frame.hands.length > 0) {
     var hand = frame.hands[0];
     var position = hand.palmPosition;
     // process.stdout.write('palmHeight(y): ' + position[1] + '\r');
     var palmHeight = position[1];
 
-    var note = Math.round(map(palmHeight, 0, 500, 0, NUM_NOTES));
-    process.stdout.write('note (mapped from palmHeight): ' + note + '\r');
-		// console.log(note);
+    if (palmHeight) {
+      var note = Math.round(map(palmHeight, 100, 500, 0, NUM_NOTES));
+      // process.stdout.write('note (mapped from palmHeight): ' + note + '\r');
+
+
+
+  		// output.sendMessage([176,22,1]);
+      if (note != currentNote) {
+        if (TRAIN_INPUT == "none" || TRAIN_INPUT == "palmHeight") {
+
+          process.stdout.write('[');
+          for (var n = 0; n < NUM_NOTES; n++) {
+            if (n == note) {
+              process.stdout.write('|');
+            } else {
+              process.stdout.write('-');
+            }
+          }
+          process.stdout.write(']\n');
+
+          output.sendMessage([128,currentNote + OFFSET_PITCH,90]); // note off
+          output.sendMessage([144,note + OFFSET_PITCH,90]); // note on
+          currentNote = note;
+        }
+      }
+
+    }
+
+    // console.log('hand.roll:', hand.roll());
+
+    var rollPosition = 127 - Math.round(map(hand.roll(), -1, +1, 0, 127));
+
+    if (TRAIN_INPUT == "none" || TRAIN_INPUT == "rollPosition") {
+      // console.log('palm height (mapped):', rollPosition);
+      output.sendMessage([176, 7, rollPosition]);
+    }
+
+    if (TRAIN_INPUT == "none" || TRAIN_INPUT == "grabStrength") {
+      var grabStrength = 127 - Math.round(map(hand.grabStrength, 0, 1, 0, 127));
+      // console.log('grab strength (mapped):', grabStrength)
+      output.sendMessage([176, 8, grabStrength]);
+    }
 
   }
 });
@@ -46,6 +93,17 @@ function map (value, leftMin, leftMax, rightMin, rightMax) {
   // Convert the 0-1 range into a value in the right range.
   return rightMin + (valueScaled * rightSpan);
 }
+
+// Set up a new output.
+var output = new midi.output();
+
+// Configure a callback.
+// output.on('message', function(deltaTime, message) {
+//     console.log('m:' + message + ' d:' + deltaTime);
+// });
+
+output.openVirtualPort("Leap Controller");
+
 
 
 // // Set up a new input.
