@@ -19,10 +19,6 @@ Leap.loop(function(frame){
 
   if (frame.hands.length > 0) {
     console.log(frame.hands.length);
-    // var hand = frame.hands[0];
-    // var position = hand.palmPosition;
-    // // process.stdout.write('palmHeight(y): ' + position[1] + '\r');
-    // var palmHeight = position[1];
 
     var firstHandHeight = frame.hands[0].palmPosition[1];
     console.log('firstHandHeight:', firstHandHeight);
