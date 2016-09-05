@@ -1,30 +1,30 @@
-// var io = require('socket.io').listen(5000, {log: true});
+var argv = require('minimist')(process.argv.slice(2));
+console.dir(argv);
+
+
+
 var Leap = require('leapjs');
 
-// io.sockets.on('connection', function (_socket) {
-//
-// 	// MIDI callback....
-// 	input.on('message', function(deltaTime, message) {
-// 		console.log('m:' + message + ' d:' + deltaTime);
-// 		_socket.emit('midi', message);
-// 	});
-//
-// });
 
-
-//http://www.music.mcgill.ca/~gary/rtmidi/
-
-var NUM_NOTES = 16;
-var OFFSET_PITCH = 36;
+var MODE = (argv.mode || 'instrument');
+var NUM_NOTES = (argv.notes || 8);
+var OFFSET_PITCH = (argv.offset || 36);
+var TRAIN_INPUT = (argv.train || 'none');
 
 var currentNote = 0;
 
-var TRAIN_INPUT = "none";
+
+console.log('Mode:', MODE);
+if (MODE == 'instrument') {
+  console.log('Number of note steps:', NUM_NOTES);
+  console.log('Offset for base pitch (semitones):', OFFSET_PITCH);
+}
+console.log('Training requested:', TRAIN_INPUT);
 
 var midi = require('midi');
 console.log("MIDI up and running...");
 
-Leap.loop(function(frame){
+function processAsInstrument(frame) {
   if (frame.hands.length > 0) {
     var hand = frame.hands[0];
     var position = hand.palmPosition;
@@ -75,6 +75,15 @@ Leap.loop(function(frame){
     }
 
   }
+
+}
+
+
+
+Leap.loop(function(frame){
+  if (MODE == "instrument") {
+    processAsInstrument(frame);
+  }
 });
 
 
@@ -103,33 +112,3 @@ var output = new midi.output();
 // });
 
 output.openVirtualPort("Leap Controller");
-
-
-
-// // Set up a new input.
-// var input = new midi.input();
-//
-// // Count the available input ports.
-// input.getPortCount();
-//
-// // Get the name of a specified input port.
-// input.getPortName(0);
-//
-//
-//
-// // Open the first available input port.
-// input.openPort(0);
-//
-// // Sysex,timing, and active sensing messages are ignored
-// // by default. To enable these message types, pass false for
-// // the appropriate type in the function below.
-// // Order: (Sysex, Timing, Active Sensing)
-// input.ignoreTypes(false, false, false);
-
-// ... receive MIDI messages ...
-
-
-
-
-// // Close the port when done.
-// input.closePort();
