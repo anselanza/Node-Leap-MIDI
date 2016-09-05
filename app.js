@@ -11,6 +11,10 @@ var NUM_NOTES = (argv.notes || 8);
 var OFFSET_PITCH = (argv.offset || 36);
 var TRAIN_INPUT = (argv.train || 'none');
 
+var REVERB_CC = (argv.reverbChannel || 108);
+var FREQSHIFT_DRYWET_CC = (argv.freqAmountChannel || 107);
+var FREQSHIFT_CC = (argv.freqShiftChannel || 106);
+
 var currentNote = 0;
 
 
@@ -18,6 +22,13 @@ console.log('Mode:', MODE);
 if (MODE == 'instrument') {
   console.log('Number of note steps:', NUM_NOTES);
   console.log('Offset for base pitch (semitones):', OFFSET_PITCH);
+} else if (MODE == 'controller') {
+  console.log('Reverb amount channel:', REVERB_CC);
+  console.log('Frequency Shift Dry/Wet Amount channel:', FREQSHIFT_DRYWET_CC);
+  console.log('Frequency Shift Pitch channel:', FREQSHIFT_CC);
+} else {
+  console.log('Unknown mode! Quitting...');
+  process.exit(1);
 }
 console.log('Training requested:', TRAIN_INPUT);
 
@@ -80,9 +91,44 @@ function processAsInstrument(frame) {
 
 
 
+function processAsController(frame) {
+
+  var freqShiftDryWetAmount = 0;
+  var reverbAmount = 0;
+
+  if (frame.hands.length > 0) {
+    console.log(frame.hands.length);
+
+    var firstHandHeight = frame.hands[0].palmPosition[1];
+    console.log('firstHandHeight:', firstHandHeight);
+
+    reverbAmount = mapClampedAndRounded(firstHandHeight, 100, 500, 0, 127);
+    console.log('reverbAmount:', reverbAmount);
+    output.sendMessage([176, REVERB_CC, reverbAmount]);
+
+    if (frame.hands.length > 1) { // two hands: use Frequency shifter, too
+      freqShiftDryWetAmount = 127;
+
+      var secondHandHeight = frame.hands[1].palmPosition[1];
+      console.log('secondHandHeight:', secondHandHeight);
+
+      var freqShift = mapClampedAndRounded(secondHandHeight, 100, 500, 0, 127);
+      console.log('freqShift:', freqShift);
+      output.sendMessage([176, FREQSHIFT_CC, freqShift]);
+
+    }
+
+  }
+  output.sendMessage([176, FREQSHIFT_DRYWET_CC, freqShiftDryWetAmount]);
+  output.sendMessage([176, REVERB_CC, reverbAmount]);
+}
+
+
 Leap.loop(function(frame){
   if (MODE == "instrument") {
     processAsInstrument(frame);
+  } else if (MODE == "controller") {
+    processAsController(frame);
   }
 });
 
@@ -102,6 +148,21 @@ function map (value, leftMin, leftMax, rightMin, rightMax) {
   // Convert the 0-1 range into a value in the right range.
   return rightMin + (valueScaled * rightSpan);
 }
+
+function mapClampedAndRounded(value, leftMin, leftMax, rightMin, rightMax) {
+  var mappedValue = map(value, leftMin, leftMax, rightMin, rightMax);
+  if (mappedValue > rightMax) {
+    mappedValue = rightMax;
+  }
+  if (mappedValue < rightMin) {
+    mappedValue =  rightMin;
+  }
+  return Math.round(mappedValue);
+}
+
+
+
+
 
 // Set up a new output.
 var output = new midi.output();
