@@ -1,6 +1,8 @@
 # Node-Leap-MIDI
 *A NodeJS server converting Leap Motion input to MIDI*
 
+![Screenshot](leap-midi-gif.gif)
+
 This nifty little server turns your Leap Motion controller into a MIDI instrument or controller. I've used it successfully with Ableton Live 9, but should work pretty well for a variety of MIDI-based applications.
 
 ##Getting Started##

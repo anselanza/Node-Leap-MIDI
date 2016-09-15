@@ -43,7 +43,7 @@ function processAsInstrument(frame) {
     var palmHeight = position[1];
 
     if (palmHeight) {
-      var note = Math.round(map(palmHeight, 100, 500, 0, NUM_NOTES));
+      var note = Math.round(map(palmHeight, 80, 300, 0, NUM_NOTES));
       // process.stdout.write('note (mapped from palmHeight): ' + note + '\r');
 
 
