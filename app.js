@@ -11,7 +11,7 @@ var FREQSHIFT_CC = 106;
 var midi = require('midi');
 console.log("MIDI up and running...");
 
-Leap.loop(function(frame){
+var leapController = Leap.loop({enableGestures:false}, function(frame){
 
   // If no hands, turn off
   var freqShiftDryWetAmount = 0;
@@ -45,6 +45,17 @@ Leap.loop(function(frame){
 
 });
 
+leapController.on('connect', function() {
+  console.log('got Leap Motion connection');
+  var origHandleData = this.connection.handleData;
+  this.connection.handleData = function(data) {
+    try {
+      return origHandleData.call(this, data);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+});
 
 
 function map (value, leftMin, leftMax, rightMin, rightMax) {
