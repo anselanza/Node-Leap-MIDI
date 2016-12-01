@@ -16,7 +16,7 @@ var FREQSHIFT_DRYWET_CC = (argv.freqAmountChannel || 107);
 var FREQSHIFT_CC = (argv.freqShiftChannel || 106);
 
 var currentNote = 0;
-
+var waitTillOff;
 
 console.log('Mode:', MODE);
 if (MODE == 'instrument') {
@@ -62,7 +62,7 @@ function processAsInstrument(frame) {
           }
           process.stdout.write(']\n');
 
-          output.sendMessage([128,currentNote + OFFSET_PITCH,90]); // note off
+          // output.sendMessage([128,currentNote + OFFSET_PITCH,90]); // note off
           output.sendMessage([144,note + OFFSET_PITCH,90]); // note on
           currentNote = note;
         }
@@ -76,15 +76,26 @@ function processAsInstrument(frame) {
 
     if (TRAIN_INPUT == "none" || TRAIN_INPUT == "rollPosition") {
       // console.log('palm height (mapped):', rollPosition);
-      output.sendMessage([176, 7, rollPosition]);
+      output.sendMessage([176, 10, rollPosition]);
     }
 
     if (TRAIN_INPUT == "none" || TRAIN_INPUT == "grabStrength") {
       var grabStrength = 127 - Math.round(map(hand.grabStrength, 0, 1, 0, 127));
       // console.log('grab strength (mapped):', grabStrength)
-      output.sendMessage([176, 8, grabStrength]);
+      output.sendMessage([176, 11, grabStrength]);
     }
 
+  }
+
+  if (frame.hands == 0) {
+    if (waitTillOff == null) {
+      waitTillOff = setTimeout(function() {
+        console.log('*************************** NOTE OFF!');
+        output.sendMessage([128,currentNote + OFFSET_PITCH,90]); // note off
+        waitTillOff = null;
+        currentNote = 0;
+      }, 2000);
+    }
   }
 
 }
