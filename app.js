@@ -4,6 +4,8 @@ var Leap = require('leapjs');
 
 var TRAIN_INPUT = "none";
 
+var USE_SERIAL = false;
+
 var REVERB_CC = 108;
 var FREQSHIFT_DRYWET_CC = 107;
 var FREQSHIFT_CC = 106;
@@ -11,11 +13,25 @@ var FREQSHIFT_CC = 106;
 var midi = require('midi');
 console.log("MIDI up and running...");
 
+var serialPort;
+
+if (USE_SERIAL) {
+  var Serialport = require('serialport');
+  // ls /dev/cu.*   to list all serial devices on OS X
+  serialPort = new SerialPort('/dev/whatever', {
+    baudRate: 9600
+  });
+}
+
+
+
 var leapController = Leap.loop({enableGestures:false}, function(frame){
 
   // If no hands, turn off
   var freqShiftDryWetAmount = 0;
   var reverbAmount = 0;
+
+  var freqShift = 0;
 
   if (frame.hands.length > 0) {
     console.log(frame.hands.length);
@@ -33,7 +49,7 @@ var leapController = Leap.loop({enableGestures:false}, function(frame){
       var secondHandHeight = frame.hands[1].palmPosition[1];
       console.log('secondHandHeight:', secondHandHeight);
 
-      var freqShift = mapClampedAndRounded(secondHandHeight, 100, 500, 0, 127);
+      freqShift = mapClampedAndRounded(secondHandHeight, 100, 500, 0, 127);
       console.log('freqShift:', freqShift);
       output.sendMessage([176, FREQSHIFT_CC, freqShift]);
 
@@ -42,6 +58,21 @@ var leapController = Leap.loop({enableGestures:false}, function(frame){
   }
   output.sendMessage([176, FREQSHIFT_DRYWET_CC, freqShiftDryWetAmount]);
   output.sendMessage([176, REVERB_CC, reverbAmount]);
+
+  if (USE_SERIAL) {
+    // write\r,height1,height2\r
+    var b, c;
+    if (frame.hands.length == 1) {
+      b = reverbAmount;
+      c = 127;
+    }
+    if (frame.hands.length == 2) {
+      b = reverbAmount;
+      c = freqShift;
+    }
+    serialPort.write("\r" + b + "," + c + "\r");
+  }
+
 
 });
 
