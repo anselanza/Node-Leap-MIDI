@@ -1,10 +1,11 @@
 var Leap = require('leapjs');
+var SerialPort = require('serialport');
 
 //http://www.music.mcgill.ca/~gary/rtmidi/
 
 var TRAIN_INPUT = "none";
 
-var USE_SERIAL = false;
+var USE_SERIAL = true;
 
 var REVERB_CC = 108;
 var FREQSHIFT_DRYWET_CC = 107;
@@ -16,11 +17,20 @@ console.log("MIDI up and running...");
 var serialPort;
 
 if (USE_SERIAL) {
-  var Serialport = require('serialport');
   // ls /dev/cu.*   to list all serial devices on OS X
-  serialPort = new SerialPort('/dev/whatever', {
+  serialPort = new SerialPort('/dev/cu.usbmodem14131', {
     baudRate: 9600
   });
+
+  serialPort.on('open', function() {
+    console.log('got connection')
+  })
+
+  serialPort.on('disconnect', function() {
+    console.log('disconnected!');
+    process.exit(1);
+  })
+
 }
 
 
@@ -55,23 +65,28 @@ var leapController = Leap.loop({enableGestures:false}, function(frame){
 
     }
 
-  }
+    if (USE_SERIAL) {
+      // write\r,height1,height2\r
+      var b, c;
+      if (frame.hands.length == 1) {
+        b = reverbAmount;
+        c = 127;
+      }
+      if (frame.hands.length == 2) {
+        b = reverbAmount;
+        c = freqShift;
+      }
+
+      var serialString = "write\r" + b + "," + c + "\r";
+      console.log(serialString);
+      serialPort.write(serialString);
+    }
+
+  } // at least one hand
   output.sendMessage([176, FREQSHIFT_DRYWET_CC, freqShiftDryWetAmount]);
   output.sendMessage([176, REVERB_CC, reverbAmount]);
 
-  if (USE_SERIAL) {
-    // write\r,height1,height2\r
-    var b, c;
-    if (frame.hands.length == 1) {
-      b = reverbAmount;
-      c = 127;
-    }
-    if (frame.hands.length == 2) {
-      b = reverbAmount;
-      c = freqShift;
-    }
-    serialPort.write("\r" + b + "," + c + "\r");
-  }
+
 
 
 });
